@@ -22,11 +22,17 @@ import (
 // its sync in the sidebar, one under the other, and the history and the
 // diffs of the one worked in last beside them.
 type workspace struct {
-	host, dir string // the folder, on host, "" for this computer
-	apps      []*app // a repository each
-	active    int
-	closed    map[string]bool // the repositories folded away, by folder
-	win       *mygo.Window
+	managed    bool // the persistent library of local repositories, including unrelated folders
+	opening    bool
+	catalogErr string
+	clone      clonePlan
+	cloneCred  credPrompt
+	updFn      func(func())
+	host, dir  string // the folder, on host, "" for this computer
+	apps       []*app // a repository each
+	active     int
+	closed     map[string]bool // the repositories folded away, by folder
+	win        *mygo.Window
 }
 
 // workspaces are the workspaces' windows, by folder.
@@ -237,6 +243,10 @@ func openLocal(dir string) error {
 
 // show opens repos' window: the one's, or the workspace's of dir.
 func show(host, dir string, repos []*git.Repo) {
+	if host == "" {
+		openManaged(repos)
+		return
+	}
 	if len(repos) == 1 {
 		open(repos[0])
 		return
@@ -248,18 +258,27 @@ func show(host, dir string, repos []*git.Repo) {
 // there is one.
 func openWorkspace(host, dir string, repos []*git.Repo) {
 	key := git.Location(host, dir)
-	remember(host, dir)
+	managed := host == "" && dir == managedWorkspaceKey
+	if !managed {
+		remember(host, dir)
+	}
 	if ws := workspaces[key]; ws != nil {
+		if managed {
+			ws.addManagedRepos(repos)
+		}
 		ws.win.Show()
 		ws.win.Focus()
 		return
 	}
 	name := path.Base(strings.ReplaceAll(dir, `\`, "/"))
+	if managed {
+		name = loc.Repositories()
+	}
 	title := name + " — MyGit"
 	if host != "" {
 		title = name + " — " + hostName(host)
 	}
-	ws := &workspace{host: host, dir: dir, closed: map[string]bool{}}
+	ws := &workspace{host: host, dir: dir, managed: managed, closed: map[string]bool{}}
 	for _, r := range repos {
 		a := newApp(r)
 		a.ws = ws
@@ -268,15 +287,19 @@ func openWorkspace(host, dir string, repos []*git.Repo) {
 	// Repositories hidden the last time stay hidden, and one that is not
 	// shows when the one worked in last is hidden.
 	for i := range ws.apps {
-		if !ws.hidden(i) {
+		if managed || !ws.hidden(i) {
 			ws.active = i
 			break
 		}
 	}
+	width, height := 1200, 800
+	if managed {
+		width, height = 1500, 960
+	}
 	ws.win = mygo.NewWindow(customTitleBar(mygo.WindowOptions{
 		Title:     title,
-		Width:     1200,
-		Height:    800,
+		Width:     width,
+		Height:    height,
 		MinWidth:  720,
 		MinHeight: 480,
 		StateKey:  "main",
@@ -285,6 +308,7 @@ func openWorkspace(host, dir string, repos []*git.Repo) {
 	dropMenuBar(ws.win)
 	workspaces[key] = ws
 	ws.win.OnClosed(func() { delete(workspaces, key) })
+	ws.win.OnClosed(ws.clone.stop)
 	// A window closed with a file edited and not saved asks first, in the
 	// repository it is in.
 	ws.win.OnClose(func(e *mygo.CloseEvent) {
@@ -306,7 +330,12 @@ func openWorkspace(host, dir string, repos []*git.Repo) {
 }
 
 // name is the workspace's folder's name.
-func (ws *workspace) name() string { return path.Base(strings.ReplaceAll(ws.dir, `\`, "/")) }
+func (ws *workspace) name() string {
+	if ws.managed {
+		return loc.Repositories()
+	}
+	return path.Base(strings.ReplaceAll(ws.dir, `\`, "/"))
+}
 
 // activate makes the i-th repository the one the history and the diffs
 // show, keeping the window laid out as it was.
@@ -317,9 +346,27 @@ func (ws *workspace) activate(i int) {
 	from, to := ws.apps[ws.active], ws.apps[i]
 	to.sidebarW, to.logH, to.filesW, to.stagedPct = from.sidebarW, from.logH, from.filesW, from.stagedPct
 	ws.active = i
+	if ws.managed {
+		prefs.ActiveRepository = to.repo.Dir
+		prefs.save()
+	}
 }
 
-func (ws *workspace) view(c *ui.Context) { ws.apps[ws.active].view(c) }
+func (ws *workspace) view(c *ui.Context) {
+	if ws.managed {
+		c.OnShortcut(ui.Cmd, ui.KeyO, ws.pickRepository)
+		c.OnShortcut(ui.Cmd|ui.Shift, ui.KeyO, ws.openClone)
+		defer func() {
+			ws.clone.view(c, ws.win, ws.update, ws.selectRepository)
+			ws.cloneCred.view(c)
+		}()
+	}
+	if ws.managed && len(ws.apps) == 0 {
+		ws.emptyLibraryView(c)
+		return
+	}
+	ws.apps[ws.active].view(c)
+}
 
 // sidebar is each repository's changes, one under the other.
 func (ws *workspace) sidebar(c *ui.Context) {

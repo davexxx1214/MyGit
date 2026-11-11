@@ -1508,5 +1508,15 @@
   "clearRecent": "Clear Recent",
   "noRecent": "Repositories you open show up here",
   "closeProject": "Close Project",
-  "switchProject": "Switch Project"
+  "switchProject": "Switch Project",
+  "repositories": "Repositories",
+  "addRepository": "Add Repository…",
+  "removeRepository": "Remove from Repositories",
+  "removeRepositoryHint": "Removing a repository from this list keeps its files on disk.",
+  "repositoriesEmpty": "Add a repository to get started",
+  "commitView": "Show Changes and Commit",
+  "logView": "Show Log",
+  "showInFullHistory": "Show in Full History",
+  "allBranches": "All branches and remotes",
+  "addRepositoryFolder": "Add from Folder…"
 }

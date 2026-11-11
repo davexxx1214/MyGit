@@ -23,11 +23,15 @@ const logBatch = 2000
 // app is a repository's window: its history, its changes, and the diff of
 // what was chosen last.
 type app struct {
-	repo   *git.Repo
-	win    *mygo.Window
-	update func(func())  // runs a function on the main thread, the window's Update
-	online chan struct{} // a refresh reached the repository, for a watch to start again
-	ws     *workspace    // the workspace it is one of, nil in a window of its own
+	repo          *git.Repo
+	win           *mygo.Window
+	update        func(func())  // runs a function on the main thread, the window's Update
+	online        chan struct{} // a refresh reached the repository, for a watch to start again
+	ws            *workspace    // the workspace it is one of, nil in a window of its own
+	retired       bool          // removed from the library; late focus/watch callbacks must not restart it
+	watchCancel   context.CancelFunc
+	desktopLog    bool
+	pendingReveal string // full hash to select once streamed history reaches it
 
 	// The history and its graph, a row per commit.
 	commits   []git.Commit
@@ -177,6 +181,9 @@ func (a *app) start() {
 			})
 		}
 		a.win.OnClosed(func() { // the next window opens as this one was laid out
+			if a.retired || a.ws != nil && a.ws.managed && len(a.ws.apps) > 0 && a.ws.apps[a.ws.active] != a {
+				return
+			}
 			prefs.SidebarW, prefs.LogH, prefs.FilesW, prefs.StagedPct = a.sidebarW, a.logH, a.filesW, a.stagedPct
 			prefs.save()
 		})
@@ -190,6 +197,7 @@ func (a *app) start() {
 // refreshed as the window is focused.
 func (a *app) watch() {
 	ctx, cancel := context.WithCancel(context.Background())
+	a.watchCancel = cancel
 	a.win.OnClosed(cancel)
 	if !a.local() {
 		go a.watchRemote(ctx)
@@ -310,6 +318,9 @@ type snapshot struct {
 // refresh reads the status, and the history again when a ref moved. A
 // refresh asked for while one runs runs once after it.
 func (a *app) refresh() {
+	if a.retired {
+		return
+	}
 	a.checkPull()
 	if a.refreshing {
 		a.again = true
@@ -350,7 +361,7 @@ func (a *app) refresh() {
 		}
 		a.genMarked, a.unpushed = s.marked, s.unpushed
 		reload := s.refs != a.refs || a.commits == nil && !a.loading
-		if s.status.Branch != a.status.Branch && a.scope.Ref != "HEAD" {
+		if s.status.Branch != a.status.Branch && a.scope.Ref != "HEAD" && a.pendingReveal == "" {
 			// Switching branches shows the new one's history.
 			a.scope.Ref, reload = "HEAD", true
 		}
@@ -447,9 +458,10 @@ func (a *app) loadLog() {
 	}
 	a.commits, a.rows, a.loading, a.logSel = nil, nil, true, -1
 	a.matches, a.searched = a.matches[:0], 0
+	scope := a.scope
 	go func() {
 		var layout graph.Layout
-		err := a.repo.Log(context.Background(), a.scope, logBatch, func(batch []git.Commit) {
+		err := a.repo.Log(context.Background(), scope, logBatch, func(batch []git.Commit) {
 			rows := make([]graph.Row, len(batch))
 			for i := range batch {
 				rows[i] = layout.Add(batch[i].Hash, batch[i].Parents)
@@ -465,6 +477,7 @@ func (a *app) loadLog() {
 				}
 				a.commits = append(a.commits, batch...)
 				a.rows = append(a.rows, rows...)
+				a.finishReveal()
 			})
 		})
 		a.update(func() {
@@ -474,6 +487,12 @@ func (a *app) loadLog() {
 			a.loading = false
 			if err != nil {
 				a.errMsg = loc.ErrReadHistory(err.Error())
+			}
+			if a.pendingReveal != "" {
+				if err == nil {
+					a.errMsg = loc.ErrNotInHistory(shortRev(a.pendingReveal))
+				}
+				a.pendingReveal = ""
 			}
 		})
 	}()

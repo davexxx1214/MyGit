@@ -5487,3 +5487,103 @@ func SwitchProject() string { return In(i18n.Locale()).SwitchProject() }
 func (msgs Messages) SwitchProject() string {
 	return Catalog.Format(msgs.locale, "switchProject", nil)
 }
+
+// Repositories says "Repositories"
+// in the language the app shows.
+func Repositories() string { return In(i18n.Locale()).Repositories() }
+
+// Repositories says "Repositories"
+// in the language of msgs.
+func (msgs Messages) Repositories() string {
+	return Catalog.Format(msgs.locale, "repositories", nil)
+}
+
+// AddRepository says "Add Repository…"
+// in the language the app shows.
+func AddRepository() string { return In(i18n.Locale()).AddRepository() }
+
+// AddRepository says "Add Repository…"
+// in the language of msgs.
+func (msgs Messages) AddRepository() string {
+	return Catalog.Format(msgs.locale, "addRepository", nil)
+}
+
+// RemoveRepository says "Remove from Repositories"
+// in the language the app shows.
+func RemoveRepository() string { return In(i18n.Locale()).RemoveRepository() }
+
+// RemoveRepository says "Remove from Repositories"
+// in the language of msgs.
+func (msgs Messages) RemoveRepository() string {
+	return Catalog.Format(msgs.locale, "removeRepository", nil)
+}
+
+// RemoveRepositoryHint says "Removing a repository from this list keeps its files on disk."
+// in the language the app shows.
+func RemoveRepositoryHint() string { return In(i18n.Locale()).RemoveRepositoryHint() }
+
+// RemoveRepositoryHint says "Removing a repository from this list keeps its files on disk."
+// in the language of msgs.
+func (msgs Messages) RemoveRepositoryHint() string {
+	return Catalog.Format(msgs.locale, "removeRepositoryHint", nil)
+}
+
+// RepositoriesEmpty says "Add a repository to get started"
+// in the language the app shows.
+func RepositoriesEmpty() string { return In(i18n.Locale()).RepositoriesEmpty() }
+
+// RepositoriesEmpty says "Add a repository to get started"
+// in the language of msgs.
+func (msgs Messages) RepositoriesEmpty() string {
+	return Catalog.Format(msgs.locale, "repositoriesEmpty", nil)
+}
+
+// CommitView says "Show Changes and Commit"
+// in the language the app shows.
+func CommitView() string { return In(i18n.Locale()).CommitView() }
+
+// CommitView says "Show Changes and Commit"
+// in the language of msgs.
+func (msgs Messages) CommitView() string {
+	return Catalog.Format(msgs.locale, "commitView", nil)
+}
+
+// LogView says "Show Log"
+// in the language the app shows.
+func LogView() string { return In(i18n.Locale()).LogView() }
+
+// LogView says "Show Log"
+// in the language of msgs.
+func (msgs Messages) LogView() string {
+	return Catalog.Format(msgs.locale, "logView", nil)
+}
+
+// ShowInFullHistory says "Show in Full History"
+// in the language the app shows.
+func ShowInFullHistory() string { return In(i18n.Locale()).ShowInFullHistory() }
+
+// ShowInFullHistory says "Show in Full History"
+// in the language of msgs.
+func (msgs Messages) ShowInFullHistory() string {
+	return Catalog.Format(msgs.locale, "showInFullHistory", nil)
+}
+
+// AllBranches says "All branches and remotes"
+// in the language the app shows.
+func AllBranches() string { return In(i18n.Locale()).AllBranches() }
+
+// AllBranches says "All branches and remotes"
+// in the language of msgs.
+func (msgs Messages) AllBranches() string {
+	return Catalog.Format(msgs.locale, "allBranches", nil)
+}
+
+// AddRepositoryFolder says "Add from Folder…"
+// in the language the app shows.
+func AddRepositoryFolder() string { return In(i18n.Locale()).AddRepositoryFolder() }
+
+// AddRepositoryFolder says "Add from Folder…"
+// in the language of msgs.
+func (msgs Messages) AddRepositoryFolder() string {
+	return Catalog.Format(msgs.locale, "addRepositoryFolder", nil)
+}

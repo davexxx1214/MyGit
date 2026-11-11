@@ -430,6 +430,9 @@ func (a *app) deleteBranch(b string) {
 
 // commitMenu is a commit's context menu in the history.
 func (a *app) commitMenu(m *ui.Menu, cm git.Commit) {
+	if m.Item(loc.ShowInFullHistory()).Chosen() {
+		a.revealCommit(cm.Hash)
+	}
 	if m.Item(loc.CopyHash()).Chosen() {
 		mygo.Clipboard.WriteText(cm.Hash)
 	}

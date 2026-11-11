@@ -541,5 +541,15 @@
   "clearRecent": "清除最近開啟",
   "noRecent": "開啟過的儲存庫會顯示在這裡",
   "closeProject": "關閉專案",
-  "switchProject": "切換專案"
+  "switchProject": "切換專案",
+  "repositories": "倉庫",
+  "addRepository": "新增倉庫…",
+  "removeRepository": "從倉庫清單移除",
+  "removeRepositoryHint": "從清單移除倉庫會保留磁碟上的檔案。",
+  "repositoriesEmpty": "新增倉庫以開始使用",
+  "commitView": "顯示變更與提交",
+  "logView": "顯示歷史",
+  "showInFullHistory": "在完整歷史中顯示",
+  "allBranches": "所有本機與遠端分支",
+  "addRepositoryFolder": "從資料夾新增…"
 }

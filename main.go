@@ -95,6 +95,10 @@ func main() {
 			return
 		}
 		cwd, _ := os.Getwd()
+		if len(os.Args) == 1 && len(prefs.Repositories) > 0 {
+			openManaged(nil)
+			return
+		}
 		openArg(os.Args[1:], cwd)
 	})
 	if err := mygo.App.Run(); err != nil {
@@ -148,6 +152,10 @@ func openDir(dir string) {
 
 // open shows a repository's window, the one open already if there is one.
 func open(repo *git.Repo) {
+	if repo.Host() == "" {
+		openManaged([]*git.Repo{repo})
+		return
+	}
 	key := repo.Location()
 	remember(repo.Host(), repo.Dir)
 	if a := apps[key]; a != nil {
@@ -256,7 +264,10 @@ func exists(p string) bool {
 func askUser(dir, prompt string) (string, bool) {
 	done := make(chan credAnswer, 1)
 	mygo.RunOnMain(func() {
+		cloning := cloningWorkspace(dir)
 		switch {
+		case cloning != nil:
+			cloning.cloneCred.ask(cloning.win, prompt, done)
 		case appAt(dir) != nil:
 			a := appAt(dir)
 			if a.ws != nil {

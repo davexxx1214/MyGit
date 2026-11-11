@@ -120,8 +120,11 @@ func (a *app) repoMenu(m *ui.Menu) {
 	if m.Item(loc.OpenRepoInEditor()).Chosen() {
 		a.openInEditor(a.repo.Dir, 0)
 	}
-	if a.ws != nil && m.Item(loc.HideRepoMenu()).Chosen() {
+	if a.ws != nil && !a.ws.managed && m.Item(loc.HideRepoMenu()).Chosen() {
 		a.ws.hide(a)
+	}
+	if a.ws != nil && a.ws.managed && m.Item(loc.RemoveRepository()).Disabled(a.busy != "" || a.ws.opening).Chosen() {
+		a.ws.removeRepository(a.repo.Dir)
 	}
 	if m.Item(loc.Sidebar()).Checked(!prefs.SidebarHidden).Chosen() {
 		a.toggleSidebar()

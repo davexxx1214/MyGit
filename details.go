@@ -80,16 +80,42 @@ func (a *app) blameView(c *ui.Context, b *blame) {
 
 // revealCommit chooses a commit in the history and scrolls to it.
 func (a *app) revealCommit(hash string) {
+	if a.leaving(func() { a.revealCommit(hash) }) {
+		return
+	}
 	a.search = ""
+	a.desktopLog = true
+	a.logChosen.Clear()
+	a.errMsg = ""
+	a.pendingReveal = hash
+	if a.scope != (git.Scope{}) {
+		a.scope = git.Scope{}
+		a.loadLog()
+		return
+	}
+	if a.finishReveal() || a.loading {
+		return
+	}
+	// Refresh even an already complete history: another process may have
+	// created the commit since it was loaded.
+	a.loadLog()
+}
+
+// finishReveal resolves a pending navigation against each streamed batch.
+func (a *app) finishReveal() bool {
+	if a.pendingReveal == "" {
+		return false
+	}
 	for i := range a.commits {
-		if a.commits[i].Hash == hash {
+		if a.commits[i].Hash == a.pendingReveal {
+			a.pendingReveal = ""
 			a.logSel = i
 			a.logList.ScrollTo(i, ui.Center)
 			a.showCommit(i)
-			return
+			return true
 		}
 	}
-	a.errMsg = loc.ErrNotInHistory(hash[:8])
+	return false
 }
 
 // pushPlan is the push dialog: the commits a push would send.

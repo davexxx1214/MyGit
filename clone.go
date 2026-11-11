@@ -37,7 +37,12 @@ func defaultParent() string {
 }
 
 func (w *welcome) cloneView(c *ui.Context) {
-	p := &w.clone
+	w.clone.view(c, w.win, w.update, w.open)
+}
+
+// view shares the clone form and runner between the welcome window and
+// the repository library; successful clones are handed back to their host.
+func (p *clonePlan) view(c *ui.Context, win *mygo.Window, update func(func()), opened func(string)) {
 	if !p.open {
 		return
 	}
@@ -45,16 +50,16 @@ func (w *welcome) cloneView(c *ui.Context) {
 	if ui.Modal(c, &p.open, func() {
 		ui.Column(c).Gap(10).Width(dialogWidth(c, 460)).Children(func() {
 			ui.Text(c, loc.CloneTitle()).Bold().FontSize(15)
-			if ui.TextInput(c, &p.url).Placeholder(loc.CloneURLPlaceholder()).Label(loc.CloneURL()).AutoFocus().Changed() && !p.named {
+			if ui.TextInput(c, &p.url).Placeholder(loc.CloneURLPlaceholder()).Label(loc.CloneURL()).Disabled(p.running).AutoFocus().Changed() && !p.named {
 				p.name = git.RepoName(strings.TrimSpace(p.url))
 			}
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, homeRelative(p.parent)).TextColor(t.TextMuted).SingleLine().Grow(1).Basis(0).Tooltip(p.parent)
 				if ui.Button(c, loc.Change()).Disabled(p.running).Clicked() {
-					go w.pickParent()
+					go p.pickParent(win, update)
 				}
 			})
-			if ui.TextInput(c, &p.name).Label(loc.FolderName()).Placeholder(loc.FolderName()).Changed() {
+			if ui.TextInput(c, &p.name).Label(loc.FolderName()).Placeholder(loc.FolderName()).Disabled(p.running).Changed() {
 				p.named = true
 			}
 			switch {
@@ -68,55 +73,66 @@ func (w *welcome) cloneView(c *ui.Context) {
 			}
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 				if ui.Button(c, loc.Cancel()).Clicked() {
-					w.stopClone()
+					p.stop()
 				}
 				ok := strings.TrimSpace(p.url) != "" && strings.TrimSpace(p.name) != "" && !p.running
 				if ui.PrimaryButton(c, loc.Clone()).Disabled(!ok).Clicked() {
-					w.startClone()
+					p.start(update, opened)
 				}
 			})
 		})
 	}).Dismissed() {
-		w.stopClone()
+		p.stop()
 	}
 }
 
-func (w *welcome) stopClone() {
-	if w.clone.cancel != nil {
-		w.clone.cancel()
+func (p *clonePlan) stop() {
+	if p.cancel != nil {
+		p.cancel()
 	}
-	w.clone = clonePlan{}
+	*p = clonePlan{}
 }
 
-func (w *welcome) pickParent() {
-	paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: w.win, Title: loc.CloneInto(), Directory: true, CreateDirectories: true})
+func (p *clonePlan) pickParent(win *mygo.Window, update func(func())) {
+	paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: loc.CloneInto(), Directory: true, CreateDirectories: true})
 	if err == nil && len(paths) > 0 {
-		w.win.Update(func() { w.clone.parent = paths[0] })
+		update(func() {
+			if p.open && !p.running {
+				p.parent = paths[0]
+			}
+		})
 	}
 }
 
-// startClone clones on a goroutine, showing git's progress, and opens the
+// start clones on a goroutine, showing git's progress, and opens the
 // clone once done.
-func (w *welcome) startClone() {
-	p := &w.clone
+func (p *clonePlan) start(update func(func()), opened func(string)) {
+	if p.running {
+		return
+	}
 	url, parent, name := strings.TrimSpace(p.url), p.parent, strings.TrimSpace(p.name)
 	ctx, cancel := context.WithCancel(context.Background())
 	p.running, p.fail, p.progress, p.cancel = true, "", loc.Connecting(), cancel
 	go func() {
 		err := git.Clone(ctx, parent, url, name, func(line string) {
-			w.win.Update(func() { w.clone.progress = line })
+			update(func() {
+				if ctx.Err() == nil {
+					p.progress = line
+				}
+			})
 		})
-		w.win.Update(func() {
+		update(func() {
+			defer cancel()
 			if ctx.Err() != nil {
 				return // canceled
 			}
-			w.clone.running = false
+			p.running = false
 			if err != nil {
-				w.clone.fail = err.Error()
+				p.fail = err.Error()
 				return
 			}
-			w.clone.open = false
-			w.open(filepath.Join(parent, name))
+			p.open = false
+			opened(filepath.Join(parent, name))
 		})
 	}()
 }

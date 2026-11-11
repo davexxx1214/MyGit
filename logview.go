@@ -48,7 +48,11 @@ func (a *app) logView(c *ui.Context) {
 			a.searchField(c)
 		})
 		if a.scope.Ref != "HEAD" {
-			a.scopeBanner(c, loc.RefOnly(a.scope.Ref), loc.BackToCurrentBranch(), git.Scope{Ref: "HEAD", Path: a.scope.Path})
+			label := loc.AllBranches()
+			if a.scope.Ref != "" {
+				label = loc.RefOnly(a.scope.Ref)
+			}
+			a.scopeBanner(c, label, loc.BackToCurrentBranch(), git.Scope{Ref: "HEAD", Path: a.scope.Path})
 		}
 		if a.scope.Path != "" {
 			a.scopeBanner(c, loc.PathOnly(a.scope.Path), loc.ShowAll(), git.Scope{Ref: a.scope.Ref})
@@ -63,6 +67,7 @@ func (a *app) logView(c *ui.Context) {
 			a.logRow(c, cm, &a.rows[ci], lanes, i == a.logSel || a.logChosen.Has(cm.Hash))
 		}).Grow(1).Basis(0)
 		if l.Changed() && a.logSel >= 0 && a.logSel < a.logCount() {
+			a.pendingReveal = ""
 			a.stagedSel, a.unstagedSel = -1, -1
 			if !a.compareChosen() {
 				a.showCommit(a.commitAt(a.logSel))
@@ -89,6 +94,7 @@ func (a *app) scopeBanner(c *ui.Context, text, button string, wider git.Scope) {
 }
 
 func (a *app) setScope(s git.Scope) {
+	a.pendingReveal = ""
 	if s != a.scope {
 		a.scope = s
 		a.loadLog()

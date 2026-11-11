@@ -20,15 +20,19 @@ import (
 // settings are the choices kept between launches, shared by the windows,
 // in a JSON file.
 type settings struct {
-	Editor         string           `json:"editor"`          // the command opening files, "" for the system's app
-	Language       string           `json:"language"`        // the language chosen, "" for the system's
-	Theme          mygo.ThemeSource `json:"theme,omitempty"` // light or dark, "" for the system's
-	Unified        bool             `json:"unified"`
-	Whitespace     string           `json:"whitespace,omitempty"`     // what the diffs leave out of whitespace changes, a whitespaceModes' key
-	FoldUnchanged  bool             `json:"foldUnchanged"`            // a changed file's lines away from its changes, as it shows whole
-	Wrap           bool             `json:"wrap"`                     // the diffs wrap long lines rather than scrolling them sideways
-	FoldedBranches map[string]bool  `json:"foldedBranches,omitempty"` // the branches' popover's sections folded, by kind
-	TreeView       bool             `json:"treeView"`                 // the lists of files show as trees
+	Repositories     []string         `json:"repositories,omitempty"` // explicitly managed local repositories, in sidebar order
+	ActiveRepository string           `json:"activeRepository,omitempty"`
+	RepositoriesH    float32          `json:"repositoriesH,omitempty"`
+	DesktopLog       bool             `json:"desktopLog,omitempty"`
+	Editor           string           `json:"editor"`          // the command opening files, "" for the system's app
+	Language         string           `json:"language"`        // the language chosen, "" for the system's
+	Theme            mygo.ThemeSource `json:"theme,omitempty"` // light or dark, "" for the system's
+	Unified          bool             `json:"unified"`
+	Whitespace       string           `json:"whitespace,omitempty"`     // what the diffs leave out of whitespace changes, a whitespaceModes' key
+	FoldUnchanged    bool             `json:"foldUnchanged"`            // a changed file's lines away from its changes, as it shows whole
+	Wrap             bool             `json:"wrap"`                     // the diffs wrap long lines rather than scrolling them sideways
+	FoldedBranches   map[string]bool  `json:"foldedBranches,omitempty"` // the branches' popover's sections folded, by kind
+	TreeView         bool             `json:"treeView"`                 // the lists of files show as trees
 	// The history's columns, as its menu sets them: the commit hash,
 	// tags and branches, and whether they show before the subject or
 	// after it.

@@ -21,6 +21,10 @@ import (
 const rowHeight = 26
 
 func (a *app) view(c *ui.Context) {
+	if a.ws != nil && a.ws.managed {
+		a.desktopView(c)
+		return
+	}
 	t := c.Theme()
 	root := ui.Column(c).Fill().FontSize(12)
 	root.Children(func() {

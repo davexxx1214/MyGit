@@ -541,5 +541,15 @@
   "clearRecent": "清除最近打开",
   "noRecent": "打开过的仓库会显示在这里",
   "closeProject": "关闭项目",
-  "switchProject": "切换项目"
+  "switchProject": "切换项目",
+  "repositories": "仓库",
+  "addRepository": "添加仓库…",
+  "removeRepository": "从仓库列表移除",
+  "removeRepositoryHint": "从列表移除仓库会保留磁盘上的文件。",
+  "repositoriesEmpty": "添加仓库以开始使用",
+  "commitView": "显示改动与提交",
+  "logView": "显示历史",
+  "showInFullHistory": "在完整历史中显示",
+  "allBranches": "所有本地与远程分支",
+  "addRepositoryFolder": "从文件夹添加…"
 }
