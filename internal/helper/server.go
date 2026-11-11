@@ -237,8 +237,17 @@ func watch(ctx context.Context, root string, changed func()) error {
 			// the refresh a change brings reads the index: else each refresh
 			// brings another, a few a second. A mode changed alone shows as
 			// the window is focused.
-			if e.Op == fsnotify.Chmod {
+			meaningful := e.Op &^ fsnotify.Chmod
+			if meaningful == 0 {
 				continue
+			}
+			// Windows may report directory metadata as Write while the
+			// initial tree is being watched. Contents have their own watches;
+			// keep creates/removes/renames so new subdirectories are discovered.
+			if meaningful == fsnotify.Write {
+				if fi, err := os.Stat(e.Name); err == nil && fi.IsDir() {
+					continue
+				}
 			}
 			if e.Has(fsnotify.Create) {
 				if fi, err := os.Stat(e.Name); err == nil && fi.IsDir() && !skip(e.Name) {

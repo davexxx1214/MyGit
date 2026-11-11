@@ -107,6 +107,27 @@ func (tt *tester) settle() {
 	}
 }
 
+// Planning a rewrite reads Git asynchronously without setting a.busy.
+// Wait for its observable result, rather than assuming 300 ms of UI quiet
+// means those Git commands have finished (especially on Windows).
+func (tt *tester) waitFor(t *testing.T, ready func() bool) {
+	t.Helper()
+	timer := time.NewTimer(30 * time.Second)
+	defer timer.Stop()
+	for {
+		tt.Frame()
+		if ready() {
+			return
+		}
+		select {
+		case fn := <-tt.queue:
+			fn()
+		case <-timer.C:
+			t.Fatalf("timed out waiting for UI result; error=%q", tt.a.errMsg)
+		}
+	}
+}
+
 func (tt *tester) click(t *testing.T, s string) {
 	t.Helper()
 	if err := tt.Click(s); err != nil {
@@ -621,7 +642,7 @@ func TestSquashCommits(t *testing.T) {
 	if err := tt.ChooseMenuItem("压缩 2 个提交…"); err != nil {
 		t.Fatal(err)
 	}
-	tt.settle()
+	tt.waitFor(t, func() bool { return tt.a.reword.open || tt.a.errMsg != "" })
 	if p := tt.a.reword; !p.open || p.message != "Add the feature\n\nTidy" {
 		t.Fatalf("plan %+v", p)
 	}

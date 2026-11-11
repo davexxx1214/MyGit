@@ -192,6 +192,9 @@ func TestAsk(t *testing.T) {
 func buildHelper(t *testing.T) string {
 	t.Helper()
 	exe := filepath.Join(t.TempDir(), "mygit-helper")
+	if runtime.GOOS == "windows" {
+		exe += ".exe"
+	}
 	if out, err := exec.Command("go", "build", "-o", exe, "mygit/cmd/mygit-helper").CombinedOutput(); err != nil {
 		t.Fatal(string(out))
 	}

@@ -15,8 +15,11 @@ func ConfigHosts(home string) []string {
 	seen := map[string]bool{}
 	var read func(path string, depth int)
 	read = func(path string, depth int) {
+		if depth > 8 { // an Include of itself ends before opening another file
+			return
+		}
 		f, err := os.Open(path)
-		if err != nil || depth > 8 { // an Include of itself ends
+		if err != nil {
 			return
 		}
 		defer f.Close()

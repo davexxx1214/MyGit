@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 
@@ -60,7 +61,11 @@ func TestSplitHost(t *testing.T) {
 // folders to the repository.
 func TestConnectDialog(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", home)
+	} else {
+		t.Setenv("HOME", home)
+	}
 	os.MkdirAll(filepath.Join(home, ".ssh"), 0o755)
 	os.WriteFile(filepath.Join(home, ".ssh", "config"), []byte("Host box\n  HostName 10.0.0.2\nHost *\n  ServerAliveInterval 30\n"), 0o644)
 	folders := map[string]helper.Listing{

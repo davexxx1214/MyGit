@@ -21,7 +21,8 @@ func repo(t *testing.T) *Repo {
 	if _, err := git(context.Background(), Local, dir, "", nil, "init", "-q", "-b", "main"); err != nil {
 		t.Skip("git: ", err)
 	}
-	for _, kv := range [][2]string{{"user.name", "Ada"}, {"user.email", "ada@example.com"}, {"commit.gpgsign", "false"}} {
+	// Fixtures and assertions use LF, independently of the machine's Git settings.
+	for _, kv := range [][2]string{{"user.name", "Ada"}, {"user.email", "ada@example.com"}, {"commit.gpgsign", "false"}, {"core.autocrlf", "false"}} {
 		if _, err := git(context.Background(), Local, dir, "", nil, "config", kv[0], kv[1]); err != nil {
 			t.Fatal(err)
 		}
