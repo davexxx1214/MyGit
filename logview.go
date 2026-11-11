@@ -67,6 +67,9 @@ func (a *app) logView(c *ui.Context) {
 			a.logRow(c, cm, &a.rows[ci], lanes, i == a.logSel || a.logChosen.Has(cm.Hash))
 		}).Grow(1).Basis(0)
 		if l.Changed() && a.logSel >= 0 && a.logSel < a.logCount() {
+			if a.ws != nil && a.ws.managed {
+				a.setDesktopLog(true)
+			}
 			a.pendingReveal = ""
 			a.stagedSel, a.unstagedSel = -1, -1
 			if !a.compareChosen() {

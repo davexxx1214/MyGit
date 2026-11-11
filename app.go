@@ -115,11 +115,13 @@ type app struct {
 	trustDir string // a repository another user owns, dropped, to trust
 	// undoBranches are the local branches deleted while the app runs, which
 	// it offers to bring back until it quits, as IDEA does.
-	undoBranches []deletedBranch
-	sidebarW     float32
-	logH         float32
-	filesW       float32
-	stagedPct    float32 // of the changes' room, the staged changes'
+	undoBranches    []deletedBranch
+	sidebarW        float32
+	logH            float32
+	filesW          float32
+	stagedPct       float32 // of the changes' room, the staged changes'
+	desktopUpperPct float32
+	desktopFilesPct float32
 }
 
 // detail is what the bottom of the window shows: a commit's files and the
@@ -158,6 +160,7 @@ type detail struct {
 func newApp(repo *git.Repo) *app {
 	return &app{repo: repo, scope: git.Scope{Ref: "HEAD"}, online: make(chan struct{}, 1), logSel: -1, stagedSel: -1, unstagedSel: -1, stashSel: -1,
 		sidebarW: prefs.SidebarW, logH: prefs.LogH, filesW: prefs.FilesW, stagedPct: prefs.StagedPct,
+		desktopUpperPct: desktopPercent(prefs.DesktopUpperPct, 72), desktopFilesPct: desktopPercent(prefs.DesktopFilesPct, 55),
 		unfolded: map[string]bool{}, viewed: map[string]bool{}, pullReviews: map[int]*pullReview{}}
 }
 
@@ -185,6 +188,9 @@ func (a *app) start() {
 				return
 			}
 			prefs.SidebarW, prefs.LogH, prefs.FilesW, prefs.StagedPct = a.sidebarW, a.logH, a.filesW, a.stagedPct
+			if a.ws != nil && a.ws.managed {
+				prefs.DesktopUpperPct, prefs.DesktopFilesPct = a.desktopUpperPct, a.desktopFilesPct
+			}
 			prefs.save()
 		})
 		a.watch()
@@ -541,6 +547,9 @@ type patchLoad func(ctx context.Context, ws git.Whitespace) (string, error)
 // showPatch loads the files of a commit's patch, which load reads, and
 // its message.
 func (a *app) showPatch(c git.Commit, load patchLoad) {
+	if a.ws != nil && a.ws.managed {
+		a.desktopLog = true
+	}
 	if a.detail.commit != nil && a.detail.commit.Hash == c.Hash && a.detail.blame == nil {
 		return
 	}

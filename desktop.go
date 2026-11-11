@@ -52,13 +52,12 @@ func (a *app) desktopView(c *ui.Context) {
 		}
 		a.operationBar(c)
 		content := func() {
-			ui.SplitVertical(c.Key("desktop-content"), &a.logH, func() {
-				if a.desktopLog {
-					a.logView(c)
-				} else {
-					a.leftPanel(c)
-				}
-			}, func() { a.detailView(c) }).Fill()
+			// Files, diff and journal remain visible together. Percentage
+			// splits keep the journal usable when the window is resized.
+			ui.SplitVerticalPercent(c.Key("desktop-journal"), &a.desktopUpperPct, func() {
+				ui.SplitVerticalPercent(c.Key("desktop-files-diff"), &a.desktopFilesPct,
+					func() { a.desktopFilesPanel(c) }, func() { a.detailView(c) }).Fill()
+			}, func() { a.logView(c) }).Fill()
 		}
 		if prefs.SidebarHidden {
 			ui.Column(c).Grow(1).Basis(0).Children(content)
@@ -96,7 +95,7 @@ func (a *app) desktopView(c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.KeyB, a.toggleSidebar)
 	c.OnShortcut(ui.Cmd, ui.KeyP, a.openFiles)
 	c.OnShortcut(ui.Cmd, ui.KeyK, a.openCommands)
-	c.OnShortcut(ui.Cmd, ui.KeyL, func() { a.setDesktopLog(true) })
+	c.OnShortcut(ui.Cmd, ui.KeyL, a.openDesktopLog)
 	c.OnShortcut(ui.Cmd, ui.KeyEnter, func() { a.setDesktopLog(false); a.commit() })
 	c.OnShortcut(0, ui.KeyF7, func() { a.stepChange(false) })
 	c.OnShortcut(ui.Shift, ui.KeyF7, func() { a.stepChange(true) })
@@ -106,8 +105,81 @@ func (a *app) desktopView(c *ui.Context) {
 }
 
 func (a *app) setDesktopLog(log bool) {
+	if !log && a.detail.commit != nil {
+		if a.leaving(func() { a.setDesktopLog(false) }) {
+			return
+		}
+		a.detail = detail{gen: a.detail.gen + 1}
+		a.logSel = -1
+		a.logChosen.Clear()
+	}
 	a.desktopLog, prefs.DesktopLog = log, log
 	prefs.save()
+}
+
+func desktopPercent(value, fallback float32) float32 {
+	if value <= 0 || value >= 100 {
+		return fallback
+	}
+	return value
+}
+
+func (a *app) openDesktopLog() {
+	if a.leaving(a.openDesktopLog) {
+		return
+	}
+	if a.detail.commit == nil && len(a.commits) > 0 {
+		i := 0
+		if a.logSel >= 0 && a.logSel < a.logCount() {
+			i = a.commitAt(a.logSel)
+		}
+		a.showCommit(i)
+	}
+	a.setDesktopLog(true)
+}
+
+// The top pane shows files of the selected historical commit, or the
+// working tree with the existing staging and commit controls.
+func (a *app) desktopFilesPanel(c *ui.Context) {
+	ui.Column(c).Fill().Children(func() {
+		ui.Row(c).Height(30).PaddingX(10).AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(c.Theme().Border).Children(func() {
+			ui.Text(c, loc.DesktopFiles()).Bold().Grow(1)
+			if a.desktopLog && a.detail.commit != nil {
+				ui.Button(c, loc.ChangesTab()).OnClick(func() { a.setDesktopLog(false) })
+			}
+		})
+		if a.desktopLog && a.detail.commit != nil {
+			a.filesPane(c)
+			return
+		}
+		ui.Segmented(c, &a.leftTab, loc.ChangesTab(), loc.StashTab(len(a.stashes))).Margin(4, 8)
+		if a.leftTab == 1 {
+			a.stashPanel(c)
+			return
+		}
+		if len(a.staged)+len(a.unstaged) > 0 || a.filter.query != "" {
+			a.filterField(c)
+		}
+		ui.SplitPercent(c.Key("desktop-staging"), &a.stagedPct, func() {
+			ui.Column(c).Fill().Children(func() { a.changeSection(c, loc.Staged(), true, true) })
+		}, func() {
+			ui.Column(c).Fill().Children(func() { a.changeSection(c, loc.Changes(), false, true) })
+		}).Grow(1).Basis(0)
+		// Keep the file list tall: place the draft beside its submit controls.
+		ui.Row(c).Padding(6, 8).Gap(10).AlignItems(ui.Center).BorderWidth(1, 0, 0, 0).BorderColor(c.Theme().Border).Children(func() {
+			a.messageField(c).Lines(1, 3).MinHeight(38).Grow(1)
+			ui.Column(c).Gap(4).Children(func() {
+				if ui.Checkbox(c, &a.amend, loc.Amend()).Changed() {
+					a.toggleAmend()
+				}
+				label := loc.Commit()
+				if n := len(a.staged); n > 0 {
+					label = loc.CommitFiles(n)
+				}
+				ui.PrimaryButton(c, label).Disabled(!a.canCommit()).Tooltip(shortcut("↩")).OnClick(a.commit)
+			})
+		})
+	})
 }
 
 func desktopAction(c *ui.Context, key, icon, text, label string, selected, disabled bool) ui.Element {
@@ -159,7 +231,7 @@ func (a *app) desktopToolbar(c *ui.Context) {
 				a.discardAll()
 			}
 		})
-		desktopAction(c, "log", "repo", "Log", loc.LogView(), a.desktopLog, false).OnClick(func() { a.setDesktopLog(true) })
+		desktopAction(c, "log", "repo", "Log", loc.LogView(), a.desktopLog, false).OnClick(a.openDesktopLog)
 		ui.Box(c).Width(1).Height(42).Background(t.Border).Margin(0, 8)
 		if ui.Button(c, loc.Fetch()).Disabled(!idle).Clicked() {
 			a.run(loc.OpFetch(), a.repo.Fetch, nil)

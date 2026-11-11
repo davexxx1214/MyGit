@@ -237,3 +237,92 @@ func TestRevealCommitOutsideCurrentHistory(t *testing.T) {
 		t.Fatalf("obsolete reveal: %s %s", a.pendingReveal, a.errMsg)
 	}
 }
+
+// Exercise the journal in the working-tree view, then follow its selection
+// through the relocated file list and the independent middle diff pane.
+func TestDesktopJournalNavigation(t *testing.T) {
+	desktopPreferences(t)
+	r := testRepo(t)
+	registerRepository(r.Dir)
+	ws, tt, settle := startWorkspace(&workspace{managed: true}, []*git.Repo{r}, func(view func(*ui.Context)) *ui.Tester { return ui.NewTester(view, 1400, 1000) })
+	a := ws.apps[0]
+	file, ok := tt.Find("notes.txt")
+	if !ok {
+		t.Fatal("working files missing")
+	}
+	empty, ok := tt.Find(loc.DetailEmpty())
+	if !ok {
+		t.Fatal("middle diff pane missing")
+	}
+	journal, ok := tt.Find(loc.History())
+	if !ok {
+		t.Fatal("journal hidden in commit mode")
+	}
+	if file.Y >= empty.Y || empty.Y >= journal.Y {
+		t.Fatalf("pane order: files=%v diff=%v journal=%v", file, empty, journal)
+	}
+	if err := tt.Click("Add the feature"); err != nil {
+		t.Fatal(err)
+	}
+	settle()
+	if !a.desktopLog || a.detail.commit == nil || a.detail.diff == nil {
+		t.Fatal("journal selection did not open files and diff")
+	}
+	file, ok = tt.Find("feature.go")
+	if !ok {
+		t.Fatal("commit files missing from upper pane")
+	}
+	header, ok := tt.Find(a.detail.commit.Short())
+	if !ok {
+		t.Fatal("commit details missing")
+	}
+	journal, _ = tt.Find(loc.History())
+	if file.Y >= header.Y || header.Y >= journal.Y {
+		t.Fatalf("commit pane order: files=%v details=%v journal=%v", file, header, journal)
+	}
+	if err := tt.Click(loc.CommitView()); err != nil {
+		t.Fatal(err)
+	}
+	settle()
+	if !tt.HasText("notes.txt") || !tt.HasText(loc.History()) || a.detail.commit != nil {
+		t.Fatal("return to working tree lost the files or journal")
+	}
+	if err := tt.Click("Add the feature"); err != nil {
+		t.Fatal(err)
+	}
+	settle()
+	if a.detail.commit == nil || a.detail.diff == nil {
+		t.Fatal("reselecting the same journal entry did not restore its diff")
+	}
+	if err := tt.Click(loc.CommitView()); err != nil {
+		t.Fatal(err)
+	}
+	settle()
+	if out := os.Getenv("MYGIT_DESKTOP_DUMP"); out != "" {
+		tt.SetDark(true)
+		tt.Frame()
+		f, err := os.Create(filepath.Join(out, "desktop-journal.png"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = png.Encode(f, tt.Image()); err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+		if err := tt.Click("Add the feature"); err != nil {
+			t.Fatal(err)
+		}
+		settle()
+		if a.detail.commit == nil || a.detail.diff == nil {
+			t.Fatal("reselecting the same journal entry did not restore its diff")
+		}
+		f, err = os.Create(filepath.Join(out, "desktop-journal-commit.png"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = png.Encode(f, tt.Image()); err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+	}
+}

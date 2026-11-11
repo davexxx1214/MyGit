@@ -564,7 +564,12 @@ func (a *app) detailView(c *ui.Context) {
 			} else {
 				a.commitHeader(c, d.commit)
 			}
-			ui.Split(c.Key("files"), &a.filesW, func() { a.filesPane(c) }, func() { a.diffView(c) }).Grow(1)
+			if a.ws != nil && a.ws.managed {
+				// The desktop layout places the file list above this diff.
+				ui.Column(c).Grow(1).Basis(0).Children(func() { a.diffView(c) })
+			} else {
+				ui.Split(c.Key("files"), &a.filesW, func() { a.filesPane(c) }, func() { a.diffView(c) }).Grow(1)
+			}
 		case d.blame != nil:
 			a.blameView(c, d.blame)
 		case d.merge != nil:

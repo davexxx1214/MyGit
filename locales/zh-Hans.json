@@ -551,5 +551,6 @@
   "logView": "显示历史",
   "showInFullHistory": "在完整历史中显示",
   "allBranches": "所有本地与远程分支",
-  "addRepositoryFolder": "从文件夹添加…"
+  "addRepositoryFolder": "从文件夹添加…",
+  "desktopFiles": "文件"
 }

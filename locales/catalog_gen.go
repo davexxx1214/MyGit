@@ -5587,3 +5587,13 @@ func AddRepositoryFolder() string { return In(i18n.Locale()).AddRepositoryFolder
 func (msgs Messages) AddRepositoryFolder() string {
 	return Catalog.Format(msgs.locale, "addRepositoryFolder", nil)
 }
+
+// DesktopFiles says "Files"
+// in the language the app shows.
+func DesktopFiles() string { return In(i18n.Locale()).DesktopFiles() }
+
+// DesktopFiles says "Files"
+// in the language of msgs.
+func (msgs Messages) DesktopFiles() string {
+	return Catalog.Format(msgs.locale, "desktopFiles", nil)
+}

@@ -345,6 +345,7 @@ func (ws *workspace) activate(i int) {
 	}
 	from, to := ws.apps[ws.active], ws.apps[i]
 	to.sidebarW, to.logH, to.filesW, to.stagedPct = from.sidebarW, from.logH, from.filesW, from.stagedPct
+	to.desktopUpperPct, to.desktopFilesPct = from.desktopUpperPct, from.desktopFilesPct
 	ws.active = i
 	if ws.managed {
 		prefs.ActiveRepository = to.repo.Dir

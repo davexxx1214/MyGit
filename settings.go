@@ -24,9 +24,11 @@ type settings struct {
 	ActiveRepository string           `json:"activeRepository,omitempty"`
 	RepositoriesH    float32          `json:"repositoriesH,omitempty"`
 	DesktopLog       bool             `json:"desktopLog,omitempty"`
-	Editor           string           `json:"editor"`          // the command opening files, "" for the system's app
-	Language         string           `json:"language"`        // the language chosen, "" for the system's
-	Theme            mygo.ThemeSource `json:"theme,omitempty"` // light or dark, "" for the system's
+	DesktopUpperPct  float32          `json:"desktopUpperPct,omitempty"` // files + diff above the journal
+	DesktopFilesPct  float32          `json:"desktopFilesPct,omitempty"` // files' share of the upper area
+	Editor           string           `json:"editor"`                    // the command opening files, "" for the system's app
+	Language         string           `json:"language"`                  // the language chosen, "" for the system's
+	Theme            mygo.ThemeSource `json:"theme,omitempty"`           // light or dark, "" for the system's
 	Unified          bool             `json:"unified"`
 	Whitespace       string           `json:"whitespace,omitempty"`     // what the diffs leave out of whitespace changes, a whitespaceModes' key
 	FoldUnchanged    bool             `json:"foldUnchanged"`            // a changed file's lines away from its changes, as it shows whole

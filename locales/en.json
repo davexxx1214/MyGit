@@ -1518,5 +1518,6 @@
   "logView": "Show Log",
   "showInFullHistory": "Show in Full History",
   "allBranches": "All branches and remotes",
-  "addRepositoryFolder": "Add from Folder…"
+  "addRepositoryFolder": "Add from Folder…",
+  "desktopFiles": "Files"
 }
